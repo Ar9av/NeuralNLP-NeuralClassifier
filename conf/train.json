@@ -1,12 +1,13 @@
 {
   "task_info":{
+    "synaptic_pipeline": true,
     "label_type": "multi_label",
     "hierarchical": true,
     "hierar_taxonomy": "data/rcv1.taxonomy",
     "hierar_penalty": 0.000001
   },
   "device": "cuda",
-  "model_name": "TextCNN",
+  "model_name": "TextRCNN",
   "checkpoint_dir": "checkpoint_dir_rcv1",
   "model_dir": "trained_model_rcv1",
   "data": {
@@ -104,12 +105,12 @@
   },
   "eval": {
     "text_file": "data/rcv1_test.json",
-    "threshold": 0.5,
+    "threshold": 0.2,
     "dir": "eval_dir",
     "batch_size": 1024,
     "is_flat": true,
     "top_k": 100,
-    "model_dir": "checkpoint_dir_rcv1/TextCNN_best"
+    "model_dir": "checkpoint_dir_rcv1/TextRCNN_best"
   },
   "TextVDCNN": {
     "vdcnn_depth": 9,

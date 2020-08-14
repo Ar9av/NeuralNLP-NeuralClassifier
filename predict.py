@@ -94,21 +94,73 @@ if __name__ == "__main__":
     for line in codecs.open(sys.argv[2], "r", predictor.dataset.CHARSET):
         input_texts.append(line.strip("\n"))
     epoches = math.ceil(len(input_texts)/batch_size)
-    for i in range(epoches):
-        batch_texts = input_texts[i*batch_size:(i+1)*batch_size]
-        predict_prob = predictor.predict(batch_texts)
-        for j in predict_prob:
-            predict_probs.append(j)
-    with codecs.open("predict.txt", "w", predictor.dataset.CHARSET) as of:
-        for predict_prob in predict_probs:
-            if not is_multi:
-                predict_label_ids = [predict_prob.argmax()]
-            else:
-                predict_label_ids = []
-                predict_label_idx = np.argsort(-predict_prob)
-                for j in range(0, config.eval.top_k):
-                    if predict_prob[predict_label_idx[j]] > config.eval.threshold:
-                        predict_label_ids.append(predict_label_idx[j])
-            predict_label_name = [predictor.dataset.id_to_label_map[predict_label_id] \
-                    for predict_label_id in predict_label_ids]
-            of.write(";".join(predict_label_name) + "\n") 
+    if config.task_info.synaptic_pipeline:
+        with open("data/parent_child.json", "r") as read_file:
+        parent_child_dict = json.load(read_file)
+        label2id = dict()
+        for i, val in predictor.dataset.id_to_label_map.items():
+        label2id[val] = i
+        parent_child_id = dict()
+        for i, val in parent_child_dict.items():
+        if i == 'Root':
+            parent_child_id['Root'] = [label2id[x] for x in val]
+            continue
+        try :
+            parent_child_id[label2id[i]]= [label2id[x] for x in val]
+        except KeyError as e:
+            print(e)
+        for i in range(epoches):
+            batch_texts = input_texts[i*batch_size:(i+1)*batch_size]
+            predict_prob = predictor.predict(batch_texts)
+            for j in predict_prob:
+                predict_probs.append(j)
+        with codecs.open("predict.txt", "w", predictor.dataset.CHARSET) as of:
+            for predict_prob in predict_probs:
+                if not is_multi:
+                    predict_label_ids = [predict_prob.argmax()]
+                else:
+                    predict_label_ids = []
+                    predict_label_idx = np.argsort(-predict_prob)
+                    j = 0 
+                    prev = 'Root'
+                    forget = []
+                    while j < config.eval.top_k:
+                        if predict_prob[predict_label_idx[j]] > config.eval.threshold:
+                            try:
+                            if predict_label_idx[j] in parent_child_id[prev]:
+                                predict_label_ids.append(predict_label_idx[j])
+                                prev = predict_label_idx[j]
+                                forget.append(j)
+                                j=0
+                            except KeyError:
+                            if j in forget:
+                                j += 1
+                                continue
+                            predict_label_ids.append(predict_label_idx[j])
+                            prev = predict_label_idx[j]
+                            forget.append(j)
+                            j = 0
+                        j += 1
+
+                predict_label_name = [predictor.dataset.id_to_label_map[predict_label_id] \
+                        for predict_label_id in predict_label_ids]
+                of.write(";".join(predict_label_name) + "\n")
+    else:
+        for i in range(epoches):
+            batch_texts = input_texts[i*batch_size:(i+1)*batch_size]
+            predict_prob = predictor.predict(batch_texts)
+            for j in predict_prob:
+                predict_probs.append(j)
+        with codecs.open("predict.txt", "w", predictor.dataset.CHARSET) as of:
+            for predict_prob in predict_probs:
+                if not is_multi:
+                    predict_label_ids = [predict_prob.argmax()]
+                else:
+                    predict_label_ids = []
+                    predict_label_idx = np.argsort(-predict_prob)
+                    for j in range(0, config.eval.top_k):
+                        if predict_prob[predict_label_idx[j]] > config.eval.threshold:
+                            predict_label_ids.append(predict_label_idx[j])
+                predict_label_name = [predictor.dataset.id_to_label_map[predict_label_id] \
+                        for predict_label_id in predict_label_ids]
+                of.write(";".join(predict_label_name) + "\n") 
