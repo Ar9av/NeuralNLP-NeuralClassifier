@@ -95,19 +95,19 @@ if __name__ == "__main__":
         input_texts.append(line.strip("\n"))
     epoches = math.ceil(len(input_texts)/batch_size)
     if config.task_info.synaptic_pipeline:
-        with open("data/parent_child.json", "r") as read_file:
-        parent_child_dict = json.load(read_file)
+        with open("parent_child.json", "r") as read_file:
+          parent_child_dict = json.load(read_file)
         label2id = dict()
         for i, val in predictor.dataset.id_to_label_map.items():
-        label2id[val] = i
+          label2id[val] = i
         parent_child_id = dict()
         for i, val in parent_child_dict.items():
-        if i == 'Root':
+          if i == 'Root':
             parent_child_id['Root'] = [label2id[x] for x in val]
             continue
-        try :
-            parent_child_id[label2id[i]]= [label2id[x] for x in val]
-        except KeyError as e:
+          try :
+              parent_child_id[label2id[i]]= [label2id[x] for x in val]
+          except KeyError as e:
             print(e)
         for i in range(epoches):
             batch_texts = input_texts[i*batch_size:(i+1)*batch_size]
@@ -125,21 +125,22 @@ if __name__ == "__main__":
                     prev = 'Root'
                     forget = []
                     while j < config.eval.top_k:
+                        if j in forget:
+                          j += 1
+                          continue
                         if predict_prob[predict_label_idx[j]] > config.eval.threshold:
                             try:
-                            if predict_label_idx[j] in parent_child_id[prev]:
-                                predict_label_ids.append(predict_label_idx[j])
-                                prev = predict_label_idx[j]
-                                forget.append(j)
-                                j=0
+                              if predict_label_idx[j] in parent_child_id[prev]:
+                                  predict_label_ids.append(predict_label_idx[j])
+                                  prev = predict_label_idx[j]
+                                  forget.append(j)
+                                  j=0
                             except KeyError:
-                            if j in forget:
-                                j += 1
-                                continue
-                            predict_label_ids.append(predict_label_idx[j])
-                            prev = predict_label_idx[j]
-                            forget.append(j)
-                            j = 0
+                              pass
+                              predict_label_ids.append(predict_label_idx[j])
+                              prev = predict_label_idx[j]
+                              forget.append(j)
+                              j = 0
                         j += 1
 
                 predict_label_name = [predictor.dataset.id_to_label_map[predict_label_id] \
